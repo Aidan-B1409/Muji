@@ -1,10 +1,24 @@
 use std::env;
 use dotenv;
+// use std::time::Instant;
+// use chrono::DateTime;
+use chrono::offset::Utc;
 
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
+
+fn get_ping_time(timestamp: serenity::model::Timestamp) -> i64 {
+    let test = timestamp.to_string();
+    let parsed :Vec<&str> = test.split('.').collect();
+    let value :Vec<&str> = parsed[1].split('Z').collect();
+    let ms :i32 = value[0].parse::<i32>().unwrap();
+
+    let timestamp_ms :i64 = (timestamp.unix_timestamp() * 1000) + i64::from(ms);
+
+    return Utc::now().timestamp_millis() - timestamp_ms;
+}
 
 struct Handler;
 
@@ -21,13 +35,30 @@ impl EventHandler for Handler {
             // authentication error, or lack of permissions to post in the
             // channel, so log to stdout when some error happens, with a
             // description of it.
-            if let Err(why) = msg.channel_id.say(&ctx.http, "Pong!").await {
+            let pong = msg.channel_id.say(&ctx.http, format!("Pong! in {} ms", get_ping_time(msg.timestamp))).await;
+
+            if let Err(why) = pong {
                 println!("Error sending message: {:?}", why);
             }
         }
         if msg.content == "!check_alive" {
             if let Err(why) = msg.channel_id.say(&ctx.http, "How can I help you?").await {
                 println!("Error sending message: {:?}", why);
+            }
+        }
+        if msg.content == "!pingme" {
+            // If the `utils`-feature is enabled, then model structs will
+            // have a lot of useful methods implemented, to avoid using an
+            // often otherwise bulky Context, or even much lower-level `rest`
+            // method.
+            //
+            // In this case, you can direct message a User directly by simply
+            // calling a method on its instance, with the content of the
+            // message.
+            let dm = msg.author.dm(&ctx, |m| m.content("Hello!")).await;
+
+            if let Err(why) = dm {
+                println!("Error when direct messaging user: {:?}", why);
             }
         }
     }
