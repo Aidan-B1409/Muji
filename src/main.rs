@@ -9,17 +9,6 @@ use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 
-fn get_ping_time(timestamp: serenity::model::Timestamp) -> i64 {
-    let test = timestamp.to_string();
-    let parsed :Vec<&str> = test.split('.').collect();
-    let value :Vec<&str> = parsed[1].split('Z').collect();
-    let ms :i32 = value[0].parse::<i32>().unwrap();
-
-    let timestamp_ms :i64 = (timestamp.unix_timestamp() * 1000) + i64::from(ms);
-
-    return Utc::now().timestamp_millis() - timestamp_ms;
-}
-
 struct Handler;
 
 #[async_trait]
@@ -35,7 +24,7 @@ impl EventHandler for Handler {
             // authentication error, or lack of permissions to post in the
             // channel, so log to stdout when some error happens, with a
             // description of it.
-            let pong = msg.channel_id.say(&ctx.http, format!("Pong! in {} ms", get_ping_time(msg.timestamp))).await;
+            let pong = msg.channel_id.say(&ctx.http, format!("Pong! in {} ms", Utc::now().timestamp_millis() - msg.timestamp.timestamp_millis())).await;
 
             if let Err(why) = pong {
                 println!("Error sending message: {:?}", why);
